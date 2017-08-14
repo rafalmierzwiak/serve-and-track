@@ -35,6 +35,9 @@ var (
 	stateURLPath    = kingpin.Flag("state-url-path", "Path under which to expose service state.").Default("/state").String()
 
 	stateFilePath = kingpin.Flag("state-file-path", "File path which indicates service state.").Default("./state").String()
+
+	accessLogFilePath  = kingpin.Flag("access-log-path", "File path where requests will be logged.").String()
+	serviceLogFilePath = kingpin.Flag("service-log-path", "File path where requests will be logged.").String()
 )
 
 // GIF transparent image to serve as a tracking image
@@ -81,9 +84,20 @@ func initServer() *http.Server {
 	r.HandleFunc(*stateURLPath, serveState)
 	r.Handle(*metricsURLPath, promhttp.Handler())
 
+	if serviceLog, err := os.OpenFile(*serviceLogFilePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600); err != nil {
+		log.SetOutput(os.Stderr)
+	} else {
+		log.SetOutput(serviceLog)
+	}
+
+	accessLog, err := os.OpenFile(*accessLogFilePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		accessLog = os.Stdout
+	}
+
 	return &http.Server{
 		Addr:    *listenAddress,
-		Handler: handlers.CombinedLoggingHandler(os.Stdout, r)}
+		Handler: handlers.CombinedLoggingHandler(accessLog, r)}
 }
 
 // Starts the http server.

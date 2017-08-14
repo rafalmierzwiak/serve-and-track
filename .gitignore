@@ -1,2 +1,5 @@
 *.swp
 .DS_Store
+access.log
+service.log
+state
